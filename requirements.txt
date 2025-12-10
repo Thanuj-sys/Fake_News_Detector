@@ -1,0 +1,9 @@
+pandas
+nltk
+transformers
+torch
+markovify
+requests
+scikit-learn
+Flask
+google-generativeai

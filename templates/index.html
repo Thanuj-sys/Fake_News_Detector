@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Fake News Detector - AI Powered - v3.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 0.95em;
+            color: #666;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 24px;
+            padding: 24px;
+            border-radius: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .result.fake {
+            background: #fee;
+            border: 1px solid #fcc;
+        }
+
+        .result.real {
+            background: #efe;
+            border: 1px solid #cfc;
+        }
+
+        .result h2 {
+            font-size: 1.5em;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .result.fake h2 {
+            color: #d63031;
+        }
+
+        .result.real h2 {
+            color: #00b894;
+        }
+
+        .confidence {
+            font-size: 1.1em;
+            margin-bottom: 16px;
+            color: #555;
+        }
+
+        .scores {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .score-item {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .score-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 32px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #d63031;
+            padding: 16px;
+            border-radius: 6px;
+            margin-top: 16px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 12px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Fake News Detector</h1>
+            <p>ML-powered fact checking</p>
+        </div>
+
+        <div class="card">
+            <form id="newsForm">
+                <div class="form-group">
+                    <label for="title">Article Title</label>
+                    <input type="text" id="title" name="title" placeholder="Enter headline...">
+                </div>
+
+                <div class="form-group">
+                    <label for="text">Article Text *</label>
+                    <textarea id="text" name="text" required placeholder="Paste article text here..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="source">Source</label>
+                    <input type="text" id="source" name="source" placeholder="e.g., cnn.com">
+                </div>
+
+                <button type="submit" class="btn" id="submitBtn">
+                    Analyze
+                </button>
+            </form>
+
+            <div id="resultContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('newsForm');
+        const resultContainer = document.getElementById('resultContainer');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('title').value;
+            const text = document.getElementById('text').value;
+            const source = document.getElementById('source').value;
+
+            if (!text.trim()) {
+                showError('Please enter article text');
+                return;
+            }
+
+            // Show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Analyzing...';
+            // Show minimal loading
+            resultContainer.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, text, source })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    showError(data.message || data.error);
+                } else {
+                    showResult(data);
+                }
+            } catch (error) {
+                showError('Failed to analyze: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Analyze';
+            }
+        });
+
+        function showResult(data) {
+            const isFake = data.label === 'FAKE';
+            const confidence = (data.combined_prob * 100).toFixed(1);
+            
+            let html = `
+                <div class="result ${isFake ? 'fake' : 'real'}">
+                    <h2>${isFake ? 'Fake News' : 'Real News'}</h2>
+                    <p class="confidence">Confidence: ${confidence}%</p>
+                    
+                    <div class="scores">
+                        <div class="score-item">
+                            <div class="score-label">Style</div>
+                            <div class="score-value">${(data.style_prob_fake * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-label">BERT</div>
+                            <div class="score-value">${(data.bert_prob_fake * 100).toFixed(1)}%</div>
+                        </div>
+                        <div class="score-item">
+                            <div class="score-label">Web</div>
+                            <div class="score-value">${(data.web_score * 100).toFixed(1)}%</div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <span class="badge">ML Models</span>
+                    </div>
+                </div>
+            `;
+
+            resultContainer.innerHTML = html;
+        }
+
+        function showError(message) {
+            resultContainer.innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fake News Detector - Web UI</title>
+    <style>
+      :root{ --bg:#f4f6fb; --card:#ffffff; --muted:#6b7280; --accent:#2563eb; --danger:#ef4444; }
+      html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#111827}
+      .container{max-width:900px;margin:28px auto;padding:16px}
+      .card{background:var(--card);border-radius:12px;box-shadow:0 6px 20px rgba(15,23,42,0.06);padding:22px}
+      h1{margin:0 0 8px;font-size:22px}
+      p.lead{color:var(--muted);margin:0 0 18px}
+      form .row{display:flex;gap:12px}
+      .col{flex:1}
+      input[type=text], textarea{width:100%;padding:10px;border:1px solid #e6edf3;border-radius:8px;font-size:14px;box-sizing:border-box}
+      textarea{min-height:160px;resize:vertical}
+      .actions{display:flex;gap:12px;align-items:center;margin-top:12px}
+      button.primary{background:linear-gradient(90deg,var(--accent),#4f46e5);color:#fff;border:0;padding:10px 16px;border-radius:8px;cursor:pointer}
+      button.primary:disabled{opacity:0.6;cursor:default}
+      .result-card{margin-top:18px;padding:14px;border-radius:8px;background:#f8fafc;border:1px solid #eef2ff}
+      .result-row{display:flex;gap:12px;flex-wrap:wrap}
+      .pill{background:#fff;padding:8px 12px;border-radius:999px;border:1px solid #e6eefb;font-weight:600}
+      .label-fake{color:var(--danger);font-weight:700}
+      .label-real{color:#059669;font-weight:700}
+      .spinner{width:20px;height:20px;border:3px solid rgba(0,0,0,0.08);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      pre.trace{background:#fff;padding:10px;border-radius:6px;border:1px solid #eee;overflow:auto}
+      @media (max-width:600px){ .row{flex-direction:column} }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>Fake News Detector</h1>
+        <p class="lead">Paste an article title and body (or a short claim) and the detector will return a simple fake/real score.</p>
+
+        <form id="predictForm" method="post">
+          <div class="row">
+            <div class="col"><label>Title<br><input type="text" name="title" placeholder="Article title (optional)"></label></div>
+          </div>
+          <div style="height:12px"></div>
+          <div class="row">
+            <div class="col"><label>Text<br><textarea name="text" placeholder="Paste article text or summary here..."></textarea></label></div>
+          </div>
+          <div style="height:12px"></div>
+          <div class="row">
+            <div class="col"><label>Source<br><input type="text" name="source" placeholder="Publisher or source (e.g. Reuters)"></label></div>
+          </div>
+
+          <div class="actions">
+            <button id="predictBtn" class="primary" type="button">Predict</button>
+            <div id="spinnerHolder" style="display:none"><span class="spinner" aria-hidden="true"></span><span style="margin-left:8px;color:var(--muted)">Processing...</span></div>
+            <div id="status" style="margin-left:auto;color:var(--muted)"></div>
+          </div>
+        </form>
+
+        <div id="resultArea"></div>
+      </div>
+    </div>
+
+    <script>
+      const btn = document.getElementById('predictBtn');
+      const spinner = document.getElementById('spinnerHolder');
+      const status = document.getElementById('status');
+      const resultArea = document.getElementById('resultArea');
+
+      function showSpinner(on){ spinner.style.display = on ? 'flex' : 'none'; }
+      function showStatus(msg){ status.textContent = msg || ''; }
+
+      btn.addEventListener('click', async () => {
+        const title = document.querySelector('input[name=title]').value;
+        const text = document.querySelector('textarea[name=text]').value;
+        const source = document.querySelector('input[name=source]').value;
+        showStatus(''); resultArea.innerHTML = '';
+        showSpinner(true); btn.disabled = true;
+        try {
+          const res = await fetch('/api/predict', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, text, source })
+          });
+          if (!res.ok) {
+            throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+          }
+          const data = await res.json();
+          if (data.error) {
+            resultArea.innerHTML = `<div class="result-card"><div style="color:var(--danger)">Error: ${data.error}</div><pre class="trace">${(data.traceback||'')}</pre></div>`;
+          } else {
+            resultArea.innerHTML = `
+              <div class="result-card">
+                <div class="result-row">
+                  <div class="pill">Style (fake): ${data.style_prob_fake}</div>
+                  <div class="pill">BERT (fake): ${data.bert_prob_fake}</div>
+                  <div class="pill">Web reliability: ${data.web_score}</div>
+                </div>
+                <div style="height:12px"></div>
+                <div><strong>Combined: ${data.combined_prob}</strong> — <span class="${data.label=='FAKE' ? 'label-fake' : 'label-real'}">${data.label}</span></div>
+              </div>`;
+          }
+        } catch (err) {
+          resultArea.innerHTML = `<div class="result-card"><div style="color:var(--danger)">Request failed: ${err.message || err}</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">Make sure the server is running. Check console for details.</div></div>`;
+          console.error('Prediction error:', err);
+        } finally { showSpinner(false); btn.disabled = false; }
+      });
+    </script>
+  </body>
+</html>
